@@ -1,0 +1,60 @@
+{
+  "summary": {
+    "n": 3,
+    "accuracy": 1.0,
+    "per_iteration_accuracy": {
+      "iter_0": 1.0
+    },
+    "mean_latency_s": 1.029
+  },
+  "results": [
+    {
+      "db_id": "test",
+      "question": "How many items are there?",
+      "gold_sql": "SELECT COUNT(*) FROM items",
+      "predicted_sql": "SELECT COUNT(*) FROM items;",
+      "match": true,
+      "iterations": 0,
+      "latency_s": 0.992,
+      "error": null,
+      "per_iter_match": [
+        true
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "test",
+      "question": "What are all item names?",
+      "gold_sql": "SELECT name FROM items ORDER BY name",
+      "predicted_sql": "SELECT name FROM items;",
+      "match": true,
+      "iterations": 0,
+      "latency_s": 1.174,
+      "error": null,
+      "per_iter_match": [
+        true
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "test",
+      "question": "What is the maximum value?",
+      "gold_sql": "SELECT MAX(value) FROM items",
+      "predicted_sql": "SELECT MAX(value) FROM items;",
+      "match": true,
+      "iterations": 0,
+      "latency_s": 0.92,
+      "error": null,
+      "per_iter_match": [
+        true
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+# secrets
+.env
+.env.local
+
+# deps / build
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+dist/
+
+# test cache
+.pytest_cache/
+
+# reference repo (not part of submission)
+original_repo/
+
+# model weights (download on VM, never commit)
+models/
+
+# IDE
+.DS_Store
