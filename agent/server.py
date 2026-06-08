@@ -20,7 +20,7 @@ _langfuse_enabled = bool(
     os.environ.get("LANGFUSE_PUBLIC_KEY") and os.environ.get("LANGFUSE_SECRET_KEY")
 )
 if _langfuse_enabled:
-    from langfuse.callback import CallbackHandler
+    from langfuse.langchain import CallbackHandler
 
 app = FastAPI()
 
@@ -48,11 +48,9 @@ def health() -> dict[str, str]:
 @app.post("/answer", response_model=AnswerResponse)
 def answer(req: AnswerRequest) -> AnswerResponse:
     state = AgentState(question=req.question, db_id=req.db)
-    callbacks: list[Any] = []
-    if _langfuse_enabled:
-        tags = [f"{k}:{v}" for k, v in req.tags.items()] if req.tags else []
-        callbacks = [CallbackHandler(tags=tags)]
-    config: dict[str, Any] = {"callbacks": callbacks}
+    callbacks: list[Any] = [CallbackHandler()] if _langfuse_enabled else []
+    metadata = {"db": req.db, **req.tags}
+    config: dict[str, Any] = {"callbacks": callbacks, "metadata": metadata}
     try:
         final = graph.invoke(state, config=config)
     except Exception as e:  # noqa: BLE001

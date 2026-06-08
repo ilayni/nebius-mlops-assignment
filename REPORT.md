@@ -90,15 +90,15 @@ _Eval run against 30 BIRD-bench questions from `evals/eval_set.jsonl` using `Qwe
 
 | Metric | Baseline | After Tuning |
 |---|---|---|
-| Overall accuracy | — | — |
-| Pass on iter 1 | — | — |
-| Pass on iter 2 | — | — |
-| Pass on iter 3 | — | — |
-| Mean latency (s) | — | — |
+| Overall accuracy | 20.0% | 3.3% |
+| Pass on iter 1 | 23.3% | 3.3% |
+| Pass on iter 2 | 23.3% | 3.3% |
+| Pass on iter 3 | 20.0% | 3.3% |
+| Mean latency (s) | 10.1s | 37.4s |
 
-_Fill in from `results/eval_baseline.json` and `results/eval_after_tuning.json` after the H100 run._
+The per-iteration pass rates tell an interesting story at baseline: accuracy is flat from iter 1 to iter 2 (23.3% both), then drops to 20.0% at iter 3. The loop is not helping — it is slightly hurting. This matches what I observed in Langfuse traces: `revise` sometimes generates the exact same SQL or drifts to a worse query when the verify failure message is vague. The 3.3 percentage-point drop from iter 1 to iter 3 suggests the model is occasionally revising a correct (or near-correct) query into a wrong one when verify incorrectly flags it. The loop earns its keep on explicit execution errors (wrong column, missing JOIN) but adds noise on schema-ambiguous questions where verify can't give a precise issue string.
 
-The question the per-iteration pass rate answers is whether the verify→revise loop is doing real work or just burning extra LLM calls. If iter 1 and iter 3 pass rates are the same, the loop is noise. If iter 3 is meaningfully higher, the architecture is earning its keep. My expectation going in is that it helps mostly on schema-mismatch errors — wrong column or table name — where the execution error is explicit enough for revise to act on. Questions that fail because the question itself is ambiguous probably don't benefit.
+The after-tuning run shows a sharp regression: 3.3% accuracy (1/30) vs 20.0% at baseline, and mean latency nearly quadrupled to 37.4s. Inspecting the result file reveals the root cause: on several questions the model output raw `<think>` reasoning tokens directly into the predicted SQL instead of producing valid SQL. This is a Qwen3 "thinking mode" bleed-through — the model emits its chain-of-thought as part of the completion when the `enable_thinking=False` flag is not enforced at the generation call, which caused most queries to fail immediately with a syntax error. The prefix caching session (with its tokenizer patch and vLLM restart) coincided with this degradation, but the core issue is prompt/generation config, not the caching itself. One question also timed out at 120s, indicating the request queue was already under pressure during the run.
 
 ---
 
@@ -110,11 +110,14 @@ _Fill in during H100 session. Log each iteration in the format: saw X → hypoth
 
 | Iteration | Saw | Hypothesised | Changed | Result |
 |---|---|---|---|---|
-| 1 | — | — | — | — |
-| 2 | — | — | — | — |
-| 3 | — | — | — | — |
+| 1 | 10 RPS for 300s: 4/3000 ok, P95=96s, 1926 timeouts, 1070 client errors, achieved RPS=8.3 | Queue depth is the bottleneck — 10 RPS × 10s/req = ~100 concurrent requests, single uvicorn process + vLLM queue saturates immediately | Baseline run, no changes yet | SLO **missed** by 91s (P95 96s vs 5s target) |
+| 2 | 4-worker agent + 10 RPS 180s: 52/1800 ok, P95=114s — **invalid run**: started with ~40 leftover requests, KV cache already at 100%, waiting queue oscillated 0→peak throughout | 4 workers made things worse — more parallel agent paths meant more requests hitting an already-saturated vLLM; KV cache full from the start = every new request queueing immediately | Restarted uvicorn with `--workers 4` | SLO **missed**; result not comparable to run 1 due to dirty state; need clean restart |
+| 3 | vLLM restarted (clean queue), 2 RPS diagnostic: 24/240 ok, P95=76s, P50=36s, achieved RPS=1.33 | Capacity is well below 2 RPS — each agent request makes 2-3 sequential LLM calls; queue saturates even at low load; problem is fundamental throughput, not queue management | Reduced to --rps 2 to find actual capacity ceiling | SLO **missed** by 71s; system capacity < 2 RPS with current config; next lever: --max-num-seqs |
+| 4 | --max-num-seqs 16 + 2 RPS: 6/240 ok, P95=89s, P50=11s — worse than run 3 | Capping scheduler to 16 seqs made vLLM reject most requests fast (121 client errors); P50 improved for the few that got through but throughput collapsed | Added --max-num-seqs 16, restarted vLLM | SLO **missed**; wrong trade-off — kills throughput to lower individual latency; **SLO declared missed** |
 
-**Final verdict:** — _(SLO hit / missed with gap of X ms)_
+**Attempted but failed — prefix caching:** Added `--enable-prefix-caching` to `scripts/start_vllm.sh` to reuse KV blocks for repeated schema prefixes (~1-2k tokens, identical per database). vLLM crashed on startup with `AttributeError: Qwen2Tokenizer has no attribute all_special_tokens_extended` — a version incompatibility between vLLM 0.22.1 and transformers 5.10.2, where the newer transformers version dropped an attribute vLLM's tokenizer wrapper expects. A one-line patch (`getattr` with fallback) restored vLLM startup, but prefix caching was not re-attempted as the patch only fixed the tokenizer init path, not the underlying library incompatibility.
+
+**Final verdict:** SLO **missed**. Best result was run 3: P95 = 76s at 2 RPS — gap of 71s vs 5s target, at one-fifth of the required throughput. Root cause: 2-3 sequential LLM calls per agent request (~10s end-to-end at low concurrency) means the system cannot sustain the 10 req/s × <5s P95 target without a fundamental reduction in per-request LLM call count or significantly faster inference (quantisation, speculative decoding, or stronger hardware).
 
 ---
 

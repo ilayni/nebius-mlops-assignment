@@ -12,7 +12,7 @@ LOG="${VLLM_LOG:-$HOME/vllm.log}"
 # Download weights if not already present (~2.5 min, ~60 GB).
 if [ ! -f "$MODEL_DIR/config.json" ]; then
   echo "Downloading weights to $MODEL_DIR ..."
-  huggingface-cli download Qwen/Qwen3-30B-A3B-Instruct --local-dir "$MODEL_DIR"
+  hf download Qwen/Qwen3-30B-A3B-Instruct --local-dir "$MODEL_DIR"
 fi
 
 nohup python -m vllm.entrypoints.openai.api_server \
@@ -38,6 +38,12 @@ nohup python -m vllm.entrypoints.openai.api_server \
   `#   Splits long prefills across scheduler steps so decode requests aren't starved;` \
   `#   keeps p95 latency stable under mixed short/long prompt workloads.` \
   --enable-chunked-prefill \
+  \
+  `# --max-num-seqs 16` \
+  `#   Caps concurrent sequences in the scheduler. Prevents KV-cache thrashing under` \
+  `#   bursty load — new requests queue at HTTP layer instead of all competing for cache` \
+  `#   space simultaneously, which keeps per-request latency stable.` \
+  --max-num-seqs 16 \
   \
   --port "$PORT" > "$LOG" 2>&1 &
 

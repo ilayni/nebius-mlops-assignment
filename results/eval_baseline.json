@@ -1,48 +1,511 @@
 {
   "summary": {
-    "n": 3,
-    "accuracy": 0.0,
-    "per_iteration_accuracy": {
-      "iter_0": 0.0
-    },
-    "mean_latency_s": 0.0
+    "n": 30,
+    "overall_pass_rate": 0.2,
+    "pass_rate_by_iteration": [
+      0.233,
+      0.233,
+      0.2
+    ],
+    "mean_latency_s": 10.1
   },
+  "wall_clock_seconds": 304.4,
   "results": [
     {
-      "db_id": "test",
-      "question": "How many items are there?",
-      "gold_sql": "SELECT COUNT(*) FROM items",
-      "predicted_sql": "",
+      "db_id": "superhero",
+      "question": "How many percent of female heroes were published by Marvel Comics?",
+      "gold_sql": "SELECT CAST(COUNT(CASE WHEN T2.publisher_name = 'Marvel Comics' THEN 1 ELSE NULL END) AS REAL) * 100 / COUNT(T1.id) FROM superhero AS T1 INNER JOIN publisher AS T2 ON T1.publisher_id = T2.id INNER JOIN gender AS T3 ON T1.gender_id = T3.id WHERE T3.gender = 'Female'",
+      "predicted_sql": "SELECT (COUNT(*) * 100.0 / (SELECT COUNT(*) FROM superhero JOIN gender ON superhero.gender_id = gender.id WHERE gender.gender = 'Female')) AS percentage FROM superhero JOIN gender ON superhero.gender_id = gender.id JOIN publisher ON superhero.publisher_id = publisher.id WHERE gender.gender = 'Female' AND publisher.publisher_name = 'Marvel Comics';",
       "match": false,
-      "iterations": 0,
-      "latency_s": 0.0,
+      "iterations": 3,
+      "latency_s": 42.697,
       "error": null,
-      "per_iter_match": [],
-      "history": []
+      "per_iter_match": [
+        true,
+        true,
+        false
+      ],
+      "history": [
+        "generate_sql",
+        "revise",
+        "revise"
+      ]
     },
     {
-      "db_id": "test",
-      "question": "What are all item names?",
-      "gold_sql": "SELECT name FROM items ORDER BY name",
-      "predicted_sql": "",
+      "db_id": "formula_1",
+      "question": "What is his number of the driver who finished 0:01:54 in the Q3 of qualifying race No.903?",
+      "gold_sql": "SELECT T2.number FROM qualifying AS T1 INNER JOIN drivers AS T2 ON T2.driverId = T1.driverId WHERE T1.raceId = 903 AND T1.q3 LIKE '1:54%'",
+      "predicted_sql": "SELECT d.number\nFROM drivers d\nJOIN qualifying q ON d.driverId = q.driverId\nWHERE q.raceId = 903 AND q.q3 = '0:01:54';",
       "match": false,
-      "iterations": 0,
-      "latency_s": 0.0,
+      "iterations": 1,
+      "latency_s": 6.757,
       "error": null,
-      "per_iter_match": [],
-      "history": []
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
     },
     {
-      "db_id": "test",
-      "question": "What is the maximum value?",
-      "gold_sql": "SELECT MAX(value) FROM items",
-      "predicted_sql": "",
+      "db_id": "california_schools",
+      "question": "What is the grade span offered in the school with the highest longitude?",
+      "gold_sql": "SELECT GSoffered FROM schools ORDER BY ABS(longitude) DESC LIMIT 1",
+      "predicted_sql": "SELECT f.`Low Grade`, f.`High Grade` FROM schools s JOIN frpm f ON s.CDSCode = f.CDSCode ORDER BY s.Longitude DESC LIMIT 1;",
       "match": false,
-      "iterations": 0,
-      "latency_s": 0.0,
+      "iterations": 1,
+      "latency_s": 6.818,
       "error": null,
-      "per_iter_match": [],
-      "history": []
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "card_games",
+      "question": "List all the frame styles and cards Allen Williams worked on and find any banned cards if there are any.",
+      "gold_sql": "SELECT DISTINCT T1.frameVersion, T1.name , IIF(T2.status = 'Banned', T1.name, 'NO') FROM cards AS T1 INNER JOIN legalities AS T2 ON T1.uuid = T2.uuid WHERE T1.artist = 'Allen Williams'",
+      "predicted_sql": "SELECT DISTINCT frameVersion FROM cards;\nSELECT * FROM cards WHERE artist = 'Allen Williams';\nSELECT c.* FROM cards c JOIN legalities l ON c.uuid = l.uuid WHERE l.status = 'Banned';",
+      "match": false,
+      "iterations": 3,
+      "latency_s": 15.282,
+      "error": "ProgrammingError: You can only execute one statement at a time.",
+      "per_iter_match": [
+        false,
+        false,
+        false
+      ],
+      "history": [
+        "generate_sql",
+        "revise",
+        "revise"
+      ]
+    },
+    {
+      "db_id": "european_football_2",
+      "question": "What is the football player Francois Affolter header's finishing rate on 18/09/2014?",
+      "gold_sql": "SELECT t2.heading_accuracy FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id WHERE t1.player_name = 'Francois Affolter' AND SUBSTR(t2.`date`, 1, 10) = '2014-09-18'",
+      "predicted_sql": "SELECT pa.heading_accuracy FROM Player p JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id WHERE p.player_name = 'Francois Affolter' AND pa.date = '2014-09-18';",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 9.254,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "formula_1",
+      "question": "What is the average score of Lewis Hamilton among all the Turkish Grand Prix?",
+      "gold_sql": "SELECT AVG(T2.points) FROM drivers AS T1 INNER JOIN driverStandings AS T2 ON T1.driverId = T2.driverId INNER JOIN races AS T3 ON T3.raceId = T2.raceId WHERE T1.forename = 'Lewis' AND T1.surname = 'Hamilton' AND T3.name = 'Turkish Grand Prix'",
+      "predicted_sql": "SELECT AVG(r.points) FROM results r JOIN drivers d ON r.driverId = d.driverId JOIN races ra ON r.raceId = ra.raceId WHERE d.forename = 'Lewis' AND d.surname = 'Hamilton' AND ra.name = 'Turkish Grand Prix';",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 8.343,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "superhero",
+      "question": "Which publisher created more superheroes: DC or Marvel Comics? Find the difference in the number of superheroes.",
+      "gold_sql": "SELECT SUM(CASE WHEN T2.publisher_name = 'DC Comics' THEN 1 ELSE 0 END) - SUM(CASE WHEN T2.publisher_name = 'Marvel Comics' THEN 1 ELSE 0 END) FROM superhero AS T1 INNER JOIN publisher AS T2 ON T1.publisher_id = T2.id",
+      "predicted_sql": "SELECT (SELECT COUNT(*) FROM superhero JOIN publisher ON superhero.publisher_id = publisher.id WHERE publisher.publisher_name = 'DC') - (SELECT COUNT(*) FROM superhero JOIN publisher ON superhero.publisher_id = publisher.id WHERE publisher.publisher_name = 'Marvel Comics') AS difference;",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 10.984,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "codebase_community",
+      "question": "What are the name of badges that users who have the lowest reputation obtained?",
+      "gold_sql": "SELECT T2.Name FROM users AS T1 INNER JOIN badges AS T2 ON T1.Id = T2.UserId WHERE T1.Reputation = (SELECT MIN(Reputation) FROM users)",
+      "predicted_sql": "SELECT Name FROM badges WHERE UserId IN (SELECT Id FROM users WHERE Reputation = (SELECT MIN(Reputation) FROM users));",
+      "match": true,
+      "iterations": 1,
+      "latency_s": 6.484,
+      "error": null,
+      "per_iter_match": [
+        true
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "formula_1",
+      "question": "List the driver's ID of the top five driver, by descending order, the fastest time during the first lap of the race.",
+      "gold_sql": "SELECT driverId FROM lapTimes WHERE lap = 1 ORDER BY time LIMIT 5",
+      "predicted_sql": "SELECT driverId\nFROM lapTimes\nWHERE lap = 1\nGROUP BY driverId\nORDER BY MIN(milliseconds) DESC\nLIMIT 5;",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 7.928,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "superhero",
+      "question": "How many gold-eyed superheroes did Marvel Comics publish?",
+      "gold_sql": "SELECT COUNT(T1.id) FROM superhero AS T1 INNER JOIN publisher AS T2 ON T1.publisher_id = T2.id INNER JOIN colour AS T3 ON T1.eye_colour_id = T3.id WHERE T2.publisher_name = 'Marvel Comics' AND T3.colour = 'Gold'",
+      "predicted_sql": "SELECT COUNT(*) FROM superhero JOIN colour ON superhero.eye_colour_id = colour.id JOIN publisher ON superhero.publisher_id = publisher.id WHERE publisher.publisher_name = 'Marvel Comics' AND colour.colour = 'gold';",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 3.825,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "thrombosis_prediction",
+      "question": "What sex is the patient who in a medical examination was diagnosed with PSS and in a laboratory examination had a blood level of C-reactive protein de 2+, createnine 1 and LDH 123?",
+      "gold_sql": "SELECT T1.SEX FROM Patient AS T1 INNER JOIN Examination AS T2 ON T1.ID = T2.ID INNER JOIN Laboratory AS T3 ON T3.ID = T2.ID WHERE T2.Diagnosis = 'PSS' AND T3.CRP = '2+' AND T3.CRE = 1.0 AND T3.LDH = 123",
+      "predicted_sql": "SELECT p.SEX\nFROM Patient p\nJOIN Examination e ON p.ID = e.ID\nJOIN Laboratory l ON p.ID = l.ID\nWHERE e.Diagnosis = 'PSS'\nAND l.CRP = '2+'\nAND l.CRE = 1\nAND l.LDH = 123;",
+      "match": true,
+      "iterations": 1,
+      "latency_s": 8.524,
+      "error": null,
+      "per_iter_match": [
+        true
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "card_games",
+      "question": "Give the code of sets have expansion commander type?",
+      "gold_sql": "SELECT T2.setCode FROM sets AS T1 INNER JOIN set_translations AS T2 ON T2.setCode = T1.code WHERE T1.type = 'commander'",
+      "predicted_sql": "SELECT code FROM sets WHERE type = 'commander';",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 3.708,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "european_football_2",
+      "question": "What is the average height of players born between 1990 and 1995?",
+      "gold_sql": "SELECT SUM(height) / COUNT(id) FROM Player WHERE SUBSTR(birthday, 1, 4) BETWEEN '1990' AND '1995'",
+      "predicted_sql": "SELECT AVG(height) FROM Player WHERE strftime('%Y', birthday) BETWEEN '1990' AND '1995';",
+      "match": true,
+      "iterations": 1,
+      "latency_s": 3.846,
+      "error": null,
+      "per_iter_match": [
+        true
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "toxicology",
+      "question": "Name chemical elements that form a bond TR001_10_11.",
+      "gold_sql": "SELECT T1.element FROM atom AS T1 INNER JOIN connected AS T2 ON T1.atom_id = T2.atom_id INNER JOIN bond AS T3 ON T2.bond_id = T3.bond_id WHERE T3.bond_id = 'TR001_10_11'",
+      "predicted_sql": "SELECT a.element, b.element FROM connected c JOIN atom a ON c.atom_id = a.atom_id JOIN atom b ON c.atom_id2 = b.atom_id WHERE c.bond_id = 'TR001_10_11';",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 5.661,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "codebase_community",
+      "question": "Write all comments made by user 'A Lion.'",
+      "gold_sql": "SELECT T2.Text FROM users AS T1 INNER JOIN comments AS T2 ON T1.Id = T2.UserId WHERE T1.DisplayName = 'A Lion'",
+      "predicted_sql": "SELECT comments.* FROM comments INNER JOIN users ON comments.UserId = users.Id WHERE users.DisplayName = 'A Lion';",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 12.21,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "toxicology",
+      "question": "Among all chemical compounds identified in the database, what percent of compounds form a triple-bond.",
+      "gold_sql": "SELECT CAST(COUNT(CASE WHEN T.bond_type = '#' THEN T.bond_id ELSE NULL END) AS REAL) * 100 / COUNT(T.bond_id) FROM bond AS T",
+      "predicted_sql": "SELECT (SELECT COUNT(DISTINCT molecule_id) FROM bond WHERE bond_type = 'triple') * 100.0 / (SELECT COUNT(*) FROM molecule) AS percentage;",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 6.607,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "financial",
+      "question": "Provide the IDs and age of the client with high level credit card, which is eligible for loans.",
+      "gold_sql": "SELECT T1.client_id, STRFTIME('%Y', CURRENT_TIMESTAMP) - STRFTIME('%Y', T3.birth_date) FROM disp AS T1 INNER JOIN card AS T2 ON T2.disp_id = T1.disp_id INNER JOIN client AS T3 ON T1.client_id = T3.client_id WHERE T2.type = 'gold' AND T1.type = 'OWNER'",
+      "predicted_sql": "SELECT DISTINCT client.client_id, (strftime('%Y', 'now') - strftime('%Y', client.birth_date)) AS age FROM client JOIN disp ON client.client_id = disp.client_id JOIN card ON disp.disp_id = card.disp_id JOIN account ON disp.account_id = account.account_id JOIN loan ON account.account_id = loan.account_id WHERE card.type = 'high level' AND loan.status = 'approved';",
+      "match": false,
+      "iterations": 2,
+      "latency_s": 17.462,
+      "error": null,
+      "per_iter_match": [
+        false,
+        false
+      ],
+      "history": [
+        "generate_sql",
+        "revise"
+      ]
+    },
+    {
+      "db_id": "thrombosis_prediction",
+      "question": "Which is the youngest patient with an abnormal anti-ribonuclear protein level? Please list his or her date of birth.",
+      "gold_sql": "SELECT T1.Birthday FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.RNP != '-' OR '+-' ORDER BY T1.Birthday DESC LIMIT 1",
+      "predicted_sql": "SELECT Patient.Birthday FROM Patient WHERE Patient.ID IN (SELECT DISTINCT ID FROM Laboratory WHERE RNP IS NOT NULL) ORDER BY Patient.Birthday DESC LIMIT 1;",
+      "match": true,
+      "iterations": 1,
+      "latency_s": 9.695,
+      "error": null,
+      "per_iter_match": [
+        true
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "card_games",
+      "question": "Among the sets whose expansion type is Commander, which set has the highest total number of cards including promotional and related supplemental products but excluding Alchemy modifications? Indicate the id of the set.",
+      "gold_sql": "SELECT id FROM sets WHERE type = 'commander' ORDER BY totalSetSize DESC LIMIT 1",
+      "predicted_sql": "SELECT id FROM sets WHERE type = 'Commander' ORDER BY totalSetSize DESC LIMIT 1;",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 13.532,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "european_football_2",
+      "question": "What is the long passing score of the oldest player?",
+      "gold_sql": "SELECT t2.long_passing FROM Player AS t1 INNER JOIN Player_Attributes AS t2 ON t1.player_api_id = t2.player_api_id ORDER BY t1.birthday ASC LIMIT 1",
+      "predicted_sql": "SELECT pa.long_passing FROM Player p JOIN Player_Attributes pa ON p.player_api_id = pa.player_api_id ORDER BY p.birthday ASC LIMIT 1;",
+      "match": true,
+      "iterations": 1,
+      "latency_s": 6.114,
+      "error": null,
+      "per_iter_match": [
+        true
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "student_club",
+      "question": "List the expenses that spend more than fifty dollars on average.",
+      "gold_sql": "SELECT expense_description FROM expense GROUP BY expense_description HAVING AVG(cost) > 50",
+      "predicted_sql": "SELECT * FROM expense WHERE cost > 50;",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 9.32,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "thrombosis_prediction",
+      "question": "Provide ID, sex and age of patient who has blood glucose (GLU) not within normal range but with total cholesterol(T-CHO) within normal range.",
+      "gold_sql": "SELECT DISTINCT T1.ID, T1.SEX , STRFTIME('%Y', CURRENT_TIMESTAMP) - STRFTIME('%Y', T1.Birthday) FROM Patient AS T1 INNER JOIN Laboratory AS T2 ON T1.ID = T2.ID WHERE T2.GLU >= 180 AND T2.`T-CHO` < 250",
+      "predicted_sql": "SELECT p.ID, p.SEX, (julianday('now') - julianday(p.Birthday)) / 365 AS age FROM Patient p JOIN Laboratory l ON p.ID = l.ID WHERE (l.GLU < 70 OR l.GLU > 100) AND l.\"T-CHO\" <= 200;",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 10.193,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "toxicology",
+      "question": "What atoms comprise TR186?",
+      "gold_sql": "SELECT T.atom_id FROM atom AS T WHERE T.molecule_id = 'TR186'",
+      "predicted_sql": "SELECT atom.atom_id, atom.element \nFROM atom \nWHERE atom.molecule_id = 'TR186';",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 5.129,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "codebase_community",
+      "question": "How many posts by Matt Parker have more than 4 votes?",
+      "gold_sql": "SELECT COUNT(T1.Id) FROM users AS T1 INNER JOIN postHistory AS T2 ON T1.Id = T2.UserId INNER JOIN posts AS T3 ON T2.PostId = T3.Id INNER JOIN votes AS T4 ON T4.PostId = T3.Id WHERE T1.DisplayName = 'Matt Parker' GROUP BY T2.PostId, T4.Id HAVING COUNT(T4.Id) > 4",
+      "predicted_sql": "SELECT COUNT(*) FROM (SELECT posts.Id FROM posts JOIN users ON posts.OwnerUserId = users.Id JOIN votes ON posts.Id = votes.PostId WHERE users.DisplayName = 'Matt Parker' GROUP BY posts.Id HAVING COUNT(*) > 4);",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 6.15,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "toxicology",
+      "question": "How many triple type bonds are there?",
+      "gold_sql": "SELECT COUNT(T.bond_id) FROM bond AS T WHERE T.bond_type = '#'",
+      "predicted_sql": "SELECT COUNT(*) FROM bond WHERE bond_type = 'triple';",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 3.341,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "debit_card_specializing",
+      "question": "What percentage of Slovakian gas stations are premium?",
+      "gold_sql": "SELECT CAST(SUM(IIF(Segment = 'Premium', 1, 0)) AS FLOAT) * 100 / COUNT(GasStationID) FROM gasstations WHERE Country = 'SVK'",
+      "predicted_sql": "SELECT (CAST(COALESCE((SELECT COUNT(*) FROM gasstations WHERE Country = 'Slovakia' AND Segment = 'Premium'), 0) AS REAL) / COALESCE((SELECT COUNT(*) FROM gasstations WHERE Country = 'Slovakia'), 1)) * 100 AS percentage;",
+      "match": false,
+      "iterations": 3,
+      "latency_s": 36.366,
+      "error": null,
+      "per_iter_match": [
+        false,
+        false,
+        false
+      ],
+      "history": [
+        "generate_sql",
+        "revise",
+        "revise"
+      ]
+    },
+    {
+      "db_id": "financial",
+      "question": "Please list the name of the districts with accounts that made withdrawal transactions.",
+      "gold_sql": "SELECT DISTINCT T1.A2 FROM district AS T1 INNER JOIN account AS T2 ON T1.district_id = T2.district_id INNER JOIN trans AS T3 ON T2.account_id = T3.account_id WHERE T3.type = 'VYDAJ'",
+      "predicted_sql": "SELECT DISTINCT d.A2\nFROM district d\nJOIN account a ON d.district_id = a.district_id\nJOIN trans t ON a.account_id = t.account_id\nWHERE t.type = 'withdrawal';",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 4.738,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "student_club",
+      "question": "Among all events hold by the Student_Club in 2019, find the percentage share of events related to 'Community Service'",
+      "gold_sql": "SELECT CAST(SUM(CASE WHEN type = 'Community Service' THEN 1 ELSE 0 END) AS REAL) * 100 / COUNT(type) FROM event WHERE SUBSTR(event_date, 1, 4) = '2019'",
+      "predicted_sql": "SELECT (COUNT(CASE WHEN type = 'Community Service' THEN 1 END) * 100.0 / COUNT(*)) AS percentage FROM event WHERE event_date LIKE '2019%';",
+      "match": true,
+      "iterations": 1,
+      "latency_s": 11.712,
+      "error": null,
+      "per_iter_match": [
+        true
+      ],
+      "history": [
+        "generate_sql"
+      ]
+    },
+    {
+      "db_id": "codebase_community",
+      "question": "Please list all display names of users who are adults.",
+      "gold_sql": "SELECT DisplayName FROM users WHERE Age BETWEEN 19 AND 65",
+      "predicted_sql": "SELECT DisplayName FROM users WHERE Age >= 18;",
+      "match": false,
+      "iterations": 2,
+      "latency_s": 7.069,
+      "error": null,
+      "per_iter_match": [
+        false,
+        false
+      ],
+      "history": [
+        "generate_sql",
+        "revise"
+      ]
+    },
+    {
+      "db_id": "formula_1",
+      "question": "How many driver participated in race ID number 18?",
+      "gold_sql": "SELECT COUNT(driverId) FROM driverStandings WHERE raceId = 18",
+      "predicted_sql": "SELECT COUNT(DISTINCT driverId) FROM results WHERE raceId = 18;",
+      "match": false,
+      "iterations": 1,
+      "latency_s": 3.239,
+      "error": null,
+      "per_iter_match": [
+        false
+      ],
+      "history": [
+        "generate_sql"
+      ]
     }
   ]
 }

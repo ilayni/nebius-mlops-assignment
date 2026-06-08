@@ -160,20 +160,20 @@ def run(question: str, db: str, question_id: str = "", db_label: str = "") -> di
     state = AgentState(question=question, db_id=db)
 
     callbacks: list = []
+    metadata: dict = {}
     if os.environ.get("LANGFUSE_PUBLIC_KEY") and os.environ.get("LANGFUSE_SECRET_KEY"):
         try:
-            from langfuse.callback import CallbackHandler
-            tags = []
+            from langfuse.langchain import CallbackHandler
+            callbacks = [CallbackHandler()]
             if question_id:
-                tags.append(f"question_id:{question_id}")
+                metadata["question_id"] = question_id
             if db_label:
-                tags.append(f"db:{db_label}")
-            callbacks = [CallbackHandler(tags=tags)]
+                metadata["db"] = db_label
         except ImportError:
             pass
 
     t0 = time.monotonic()
-    final = graph.invoke(state, config={"callbacks": callbacks})
+    final = graph.invoke(state, config={"callbacks": callbacks, "metadata": metadata})
     latency = round(time.monotonic() - t0, 3)
 
     execution = final.get("execution")

@@ -103,7 +103,7 @@
       "targets": [
         {
           "datasource": {"type": "prometheus", "uid": "prometheus-uid"},
-          "expr": "vllm:gpu_cache_usage_perc",
+          "expr": "vllm:kv_cache_usage_perc",
           "legendFormat": "KV-cache",
           "refId": "A"
         }
@@ -130,7 +130,7 @@
       "targets": [
         {
           "datasource": {"type": "prometheus", "uid": "prometheus-uid"},
-          "expr": "vllm:avg_generation_throughput_toks_per_s",
+          "expr": "rate(vllm:generation_tokens_total[1m])",
           "legendFormat": "Generation (tok/s)",
           "refId": "A"
         }
@@ -157,7 +157,7 @@
       "targets": [
         {
           "datasource": {"type": "prometheus", "uid": "prometheus-uid"},
-          "expr": "vllm:avg_prompt_throughput_toks_per_s",
+          "expr": "rate(vllm:prompt_tokens_total[1m])",
           "legendFormat": "Prompt (tok/s)",
           "refId": "A"
         }
