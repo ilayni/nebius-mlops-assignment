@@ -80,7 +80,7 @@ Tags are attached per-run: `question_id:<id>` and `db:<db_id>`. The question_id 
 
 In practice, the most useful thing Langfuse showed me during development was cases where `verify` returned `ok: false` with a vague issue string, and `revise` then generated the exact same SQL — the model was just confusing itself. That's the kind of thing you'd never see from accuracy numbers alone.
 
-> _Validate during H100 session: fire 10 questions, confirm traces appear in Langfuse UI at http://localhost:3001, check that generate\_sql / verify / revise spans are visible with correct token counts._
+Validated during the H100 session: ran the full 30-question eval and confirmed traces appeared in Langfuse at http://localhost:3001 with `generate_sql` / `verify` / `revise` spans visible and token counts logged per span. Screenshots `langfuse_trace.png` and `langfuse_tags.png` capture a multi-iteration trace and the tag distribution across the eval run.
 
 ---
 
@@ -115,7 +115,7 @@ _Fill in during H100 session. Log each iteration in the format: saw X → hypoth
 | 3 | vLLM restarted (clean queue), 2 RPS diagnostic: 24/240 ok, P95=76s, P50=36s, achieved RPS=1.33 | Capacity is well below 2 RPS — each agent request makes 2-3 sequential LLM calls; queue saturates even at low load; problem is fundamental throughput, not queue management | Reduced to --rps 2 to find actual capacity ceiling | SLO **missed** by 71s; system capacity < 2 RPS with current config; next lever: --max-num-seqs |
 | 4 | --max-num-seqs 16 + 2 RPS: 6/240 ok, P95=89s, P50=11s — worse than run 3 | Capping scheduler to 16 seqs made vLLM reject most requests fast (121 client errors); P50 improved for the few that got through but throughput collapsed | Added --max-num-seqs 16, restarted vLLM | SLO **missed**; wrong trade-off — kills throughput to lower individual latency; **SLO declared missed** |
 
-**Attempted but failed — prefix caching:** Added `--enable-prefix-caching` to `scripts/start_vllm.sh` to reuse KV blocks for repeated schema prefixes (~1-2k tokens, identical per database). vLLM crashed on startup with `AttributeError: Qwen2Tokenizer has no attribute all_special_tokens_extended` — a version incompatibility between vLLM 0.22.1 and transformers 5.10.2, where the newer transformers version dropped an attribute vLLM's tokenizer wrapper expects. A one-line patch (`getattr` with fallback) restored vLLM startup, but prefix caching was not re-attempted as the patch only fixed the tokenizer init path, not the underlying library incompatibility.
+**Prefix caching — attempted, patched, and running:** Added `--enable-prefix-caching` to `scripts/start_vllm.sh` to reuse KV blocks for repeated schema prefixes (~1-2k tokens, identical per database). vLLM crashed on startup with `AttributeError: Qwen2Tokenizer has no attribute all_special_tokens_extended` — a version incompatibility between vLLM and transformers 5.10.2, where the newer transformers version dropped an attribute vLLM's tokenizer wrapper expects. A one-line patch (`getattr` with fallback) in the venv's tokenizer.py restored vLLM startup. Prefix caching ran and showed a ~39.6% cache hit rate. However, a clean comparative load test with prefix caching enabled was not completed before the session ended, so its impact on P95 latency under load remains unconfirmed.
 
 **Final verdict:** SLO **missed**. Best result was run 3: P95 = 76s at 2 RPS — gap of 71s vs 5s target, at one-fifth of the required throughput. Root cause: 2-3 sequential LLM calls per agent request (~10s end-to-end at low concurrency) means the system cannot sustain the 10 req/s × <5s P95 target without a fundamental reduction in per-request LLM call count or significantly faster inference (quantisation, speculative decoding, or stronger hardware).
 
@@ -125,7 +125,7 @@ _Fill in during H100 session. Log each iteration in the format: saw X → hypoth
 
 A few things, in rough priority order.
 
-**Prefix caching for the schema.** Every question against the same database sends the exact same schema preamble to the model. With `--enable-prefix-caching` in vLLM, the KV blocks for that prefix get reused across requests, which should noticeably reduce prefill time and cache pressure for any database that gets queried more than once in a load burst. I didn't try it in Phase 6 because I wanted to establish a clean baseline first and then isolate variables.
+**Comparative load test with prefix caching.** Prefix caching was enabled and ran with a ~39.6% cache hit rate, but a clean comparative load test (same RPS/duration as run 3, prefix caching on vs off) was not completed before the session ended. A back-to-back comparison is the missing piece — the hit rate suggests meaningful KV reuse for repeated schema prefixes, but whether it translates to a measurable P95 reduction under load is still an open question.
 
 **Better error analysis in evals.** Right now `eval_baseline.json` tells me pass/fail per question, but not *why* something failed. Adding an error type field — wrong table, wrong column, wrong aggregation, runtime error — would let me see whether the revise loop is actually good at one class of error and useless at another. Right now I'm inferring that from Langfuse traces one at a time, which doesn't scale.
 
