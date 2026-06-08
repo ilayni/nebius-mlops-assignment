@@ -22,3 +22,6 @@ models/
 
 # IDE
 .DS_Store
+
+# local-only planning notes (may contain infra IDs)
+cc_docs/h100_plan.md
