@@ -40,9 +40,11 @@ nohup python -m vllm.entrypoints.openai.api_server \
   --enable-chunked-prefill \
   \
   `# --max-num-seqs 16` \
-  `#   Caps concurrent sequences in the scheduler. Prevents KV-cache thrashing under` \
-  `#   bursty load — new requests queue at HTTP layer instead of all competing for cache` \
-  `#   space simultaneously, which keeps per-request latency stable.` \
+  `#   NOT a recommended flag. Added during Phase 6 iteration 4 as an SLO experiment and it` \
+  `#   BACKFIRED: at 2 RPS vLLM rejected most requests outright (121 client errors) and` \
+  `#   successful throughput collapsed (24/240 -> 6/240). Left in only to reflect the final` \
+  `#   H100 session state; reverting needed another long restart. See REPORT.md Phase 1 note` \
+  `#   and Phase 6 iteration 4 for the full analysis.` \
   --max-num-seqs 16 \
   \
   --port "$PORT" > "$LOG" 2>&1 &
